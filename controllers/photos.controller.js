@@ -1,4 +1,6 @@
 const Photo = require('../models/photo.model');
+const Voter = require('../models/Voter.model');
+const requestIp = require('request-ip');
 
 function escape(test) {
   return text.replace(/&/g, "&amp;")
@@ -63,14 +65,36 @@ exports.vote = async (req, res) => {
 
   try {
     const photoToUpdate = await Photo.findOne({ _id: req.params.id });
-    if(!photoToUpdate) res.status(404).json({ message: 'Not found' });
+    if (!photoToUpdate) res.status(404).json({ message: 'Not found' });
     else {
-      photoToUpdate.votes++;
-      photoToUpdate.save();
-      res.send({ message: 'OK' });
-    }
+
+      const user = await Voter.findOne({ user: req.clientIp });
+      if(user) {
+        const voteUpdate = await Voter.findOne({$and: [{user: req.clientIp, votes: req.params.id}] });
+
+        if(!voteUpdate) {
+          await Voter.updateOne({ user: req.clientIp }, { $push: { votes: [req.params.id] } });
+          const photoToUpdate = await Photo.findOne({ _id: req.params.id });
+          photoToUpdate.votes++;
+          photoToUpdate.save();
+          res.send({ message: 'OK' });
+        } else {
+          res.status(500).json(err);
+        }
+
+      } else {
+
+        const newVoter = new Voter({ user: req.clientIp, votes: [req.params.id] });
+        await newVoter.save();
+        const photoToUpdate = await Photo.findOne({ _id: req.params.id });
+        photoToUpdate.votes++;
+        photoToUpdate.save();
+        res.send({  message: 'OK' });
+      }
+      
+    };
+
   } catch(err) {
     res.status(500).json(err);
   }
-
 };

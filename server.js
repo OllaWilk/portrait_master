@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const formidable = require('express-formidable');
 const uniqid = require('uniqid');
 const connectToDB = require('./db');
+const requestIp = require('request-ip');
 
 // start express server
 const app = express();
@@ -16,6 +17,7 @@ const server = app.listen(process.env.PORT || 8000, () => {
 connectToDB();
 
 // add middleware
+app.use(requestIp.mw())
 app.use(cors());
 app.use(formidable({ uploadDir: './public/uploads/' }, [{
   event: 'fileBegin', // on every file upload...
